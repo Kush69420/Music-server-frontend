@@ -31,61 +31,133 @@
             </div>
         </div>
 
-        <!-- Top Header -->
-        <div class="top-header">
-            <div class="header-title" id="headerTitle">Music</div>
-            <div class="header-actions">
-                <button class="icon-btn" id="searchBtn">
-                    <i class="fas fa-search"></i>
+        <!-- Desktop Sidebar Navigation -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <i class="fas fa-music"></i>
+                <span class="sidebar-title">Music</span>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="#" class="sidebar-item active" data-view="home">
+                    <i class="fas fa-home"></i>
+                    <span>Home</span>
+                </a>
+                <a href="#" class="sidebar-item" data-view="playlists">
+                    <i class="fas fa-list"></i>
+                    <span>Your Library</span>
+                </a>
+                <a href="#" class="sidebar-item" data-view="songs">
+                    <i class="fas fa-music"></i>
+                    <span>All Songs</span>
+                </a>
+            </nav>
+        </aside>
+
+        <!-- Main Layout Wrapper -->
+        <div class="main-wrapper">
+            <!-- Top Header (Mobile + Desktop) -->
+            <div class="top-header">
+                <button class="icon-btn back-btn" id="backBtn" style="display: none;">
+                    <i class="fas fa-chevron-left"></i>
                 </button>
-            </div>
-        </div>
-
-        <!-- Main Content -->
-        <div class="main-content" id="mainContent">
-            <!-- Home View -->
-            <div id="homeView" class="view active">
-                <h2 class="section-title">Good Evening</h2>
-                <div class="cards-grid" id="recentPlaylists"></div>
+                <div class="header-title" id="headerTitle">Music</div>
+                <div class="header-actions">
+                    <button class="icon-btn" id="searchBtn">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
             </div>
 
-            <!-- Playlists View -->
-            <div id="playlistsView" class="view">
-                <h2 class="section-title">Your Library</h2>
-                <div class="cards-grid" id="playlistsGrid"></div>
+            <!-- Main Content -->
+            <div class="main-content" id="mainContent">
+                <!-- Home View -->
+                <div id="homeView" class="view active">
+                    <h2 class="section-title">Good Evening</h2>
+                    <div class="cards-grid" id="recentPlaylists"></div>
+                </div>
+
+                <!-- Playlists View -->
+                <div id="playlistsView" class="view">
+                    <h2 class="section-title">Your Library</h2>
+                    <div class="cards-grid" id="playlistsGrid"></div>
+                </div>
+
+                <!-- Playlist Detail View -->
+                <div id="playlistDetailView" class="view">
+                    <div class="playlist-header">
+                        <div class="playlist-cover" id="playlistCover"></div>
+                        <div class="playlist-info-wrapper">
+                            <span class="playlist-type">PLAYLIST</span>
+                            <h1 class="playlist-name" id="playlistName"></h1>
+                            <p class="playlist-meta" id="playlistMeta"></p>
+                            <div class="playlist-actions">
+                                <button class="btn btn-play" id="playPlaylistBtn">
+                                    <i class="fas fa-play"></i> Play
+                                </button>
+                                <button class="btn btn-shuffle" id="shufflePlaylistBtn">
+                                    <i class="fas fa-random"></i> Shuffle
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <ul class="track-list" id="tracksList"></ul>
+                </div>
+
+                <!-- All Songs View -->
+                <div id="songsView" class="view">
+                    <h2 class="section-title">All Songs</h2>
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="songsSearch" placeholder="Search songs...">
+                    </div>
+                    <div class="cards-grid" id="songsGrid"></div>
+                </div>
             </div>
 
-            <!-- Playlist Detail View -->
-            <div id="playlistDetailView" class="view">
-                <div class="playlist-header">
-                    <div class="playlist-cover" id="playlistCover"></div>
-                    <span class="playlist-type">PLAYLIST</span>
-                    <h1 class="playlist-name" id="playlistName"></h1>
-                    <p class="playlist-meta" id="playlistMeta"></p>
-                    <div class="playlist-actions">
-                        <button class="btn btn-play" id="playPlaylistBtn">
-                            <i class="fas fa-play"></i> Play
-                        </button>
-                        <button class="btn btn-shuffle" id="shufflePlaylistBtn">
-                            <i class="fas fa-random"></i> Shuffle
-                        </button>
+            <!-- Desktop Player Bar -->
+            <div class="desktop-player-bar" id="desktopPlayerBar">
+                <div class="player-bar-track">
+                    <div class="player-bar-cover" id="desktopPlayerCover"></div>
+                    <div class="player-bar-info">
+                        <div class="player-bar-title" id="desktopPlayerTitle">No track</div>
+                        <div class="player-bar-artist" id="desktopPlayerArtist">Select a song</div>
                     </div>
                 </div>
-                <ul class="track-list" id="tracksList"></ul>
-            </div>
-
-            <!-- All Songs View -->
-            <div id="songsView" class="view">
-                <h2 class="section-title">All Songs</h2>
-                <div class="search-box">
-                    <i class="fas fa-search"></i>
-                    <input type="text" id="songsSearch" placeholder="Search songs...">
+                <div class="player-bar-controls">
+                    <div class="player-bar-buttons">
+                        <button class="control-btn-small" id="desktopShuffleBtn">
+                            <i class="fas fa-random"></i>
+                        </button>
+                        <button class="control-btn-small" id="desktopPrevBtn">
+                            <i class="fas fa-step-backward"></i>
+                        </button>
+                        <button class="control-btn-large" id="desktopPlayPauseBtn">
+                            <i class="fas fa-play"></i>
+                        </button>
+                        <button class="control-btn-small" id="desktopNextBtn">
+                            <i class="fas fa-step-forward"></i>
+                        </button>
+                        <button class="control-btn-small" id="desktopLoopBtn">
+                            <i class="fas fa-redo"></i>
+                        </button>
+                    </div>
+                    <div class="player-bar-progress-wrapper">
+                        <span class="progress-time-small" id="desktopTimeCurrent">0:00</span>
+                        <div class="progress-bar-small" id="desktopProgressBar">
+                            <div class="progress-fill-small" id="desktopProgressFill"></div>
+                        </div>
+                        <span class="progress-time-small" id="desktopTimeTotal">0:00</span>
+                    </div>
                 </div>
-                <div class="cards-grid" id="songsGrid"></div>
+                <div class="player-bar-extra">
+                    <button class="control-btn-small" id="queueBtn">
+                        <i class="fas fa-list"></i>
+                    </button>
+                </div>
             </div>
         </div>
 
-        <!-- Mini Player -->
+        <!-- Mobile Mini Player -->
         <div class="mini-player" id="miniPlayer" style="display: none;">
             <div class="mini-player-cover" id="miniPlayerCover"></div>
             <div class="mini-player-info">
@@ -99,7 +171,7 @@
             </div>
         </div>
 
-        <!-- Full Player -->
+        <!-- Mobile Full Player -->
         <div class="full-player" id="fullPlayer">
             <div class="player-header">
                 <button class="player-close" id="closePlayerBtn">
@@ -148,7 +220,7 @@
             </div>
         </div>
 
-        <!-- Bottom Navigation -->
+        <!-- Mobile Bottom Navigation -->
         <nav class="bottom-nav">
             <a href="#" class="nav-item active" data-view="home">
                 <i class="fas fa-home"></i>
@@ -163,6 +235,32 @@
                 <span>Songs</span>
             </a>
         </nav>
+
+        <!-- Queue Drawer (Desktop) -->
+        <div class="queue-drawer" id="queueDrawer">
+            <div class="queue-header">
+                <h3>Queue</h3>
+                <button class="icon-btn" id="closeQueueBtn">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="queue-content" id="queueContent">
+                <p class="queue-empty">Queue is empty</p>
+            </div>
+        </div>
+
+        <!-- Mobile Queue Overlay -->
+        <div class="mobile-queue-overlay" id="mobileQueueOverlay">
+            <div class="mobile-queue-header">
+                <h2>Queue</h2>
+                <button class="mobile-queue-close" id="closeMobileQueueBtn">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="mobile-queue-content" id="mobileQueueContent">
+                <p class="queue-empty">Queue is empty</p>
+            </div>
+        </div>
 
         <!-- Context Menu (Bottom Sheet) -->
         <div class="overlay" id="overlay"></div>

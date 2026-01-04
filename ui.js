@@ -1,11 +1,5 @@
 /**
- * UI.JS - User Interface Logic
- * 
- * Handles:
- * - View navigation
- * - Rendering playlists, tracks, queue
- * - User interactions
- * - Context menus
+ * UI.JS - Responsive Mobile & Desktop Interface Logic
  */
 
 const UI = {
@@ -13,13 +7,24 @@ const UI = {
     currentPlaylist: null,
     allSongs: [],
     contextMenuTrack: null,
+    viewHistory: [],
 
     /**
      * Initialize UI
      */
     async init() {
         this.setupEventListeners();
-        this.showView('home');
+        this.detectLayoutMode();
+        window.addEventListener('resize', () => this.detectLayoutMode());
+    },
+
+    /**
+     * Detect if we're in mobile or desktop mode
+     */
+    detectLayoutMode() {
+        const isDesktop = window.innerWidth >= 1024;
+        document.body.classList.toggle('desktop-mode', isDesktop);
+        document.body.classList.toggle('mobile-mode', !isDesktop);
     },
 
     /**
@@ -32,8 +37,8 @@ const UI = {
             await this.handleLogin();
         });
 
-        // Navigation
-        document.querySelectorAll('.nav-item').forEach(item => {
+        // Bottom navigation (mobile)
+        document.querySelectorAll('.bottom-nav .nav-item').forEach(item => {
             item.addEventListener('click', (e) => {
                 e.preventDefault();
                 const view = item.dataset.view;
@@ -41,8 +46,42 @@ const UI = {
             });
         });
 
-        // Player controls
+        // Sidebar navigation (desktop)
+        document.querySelectorAll('.sidebar .sidebar-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
+                const view = item.dataset.view;
+                this.showView(view);
+            });
+        });
+
+        // Back button (mobile)
+        document.getElementById('backBtn').addEventListener('click', () => {
+            this.navigateBack();
+        });
+
+        // Mobile mini player - tap to open full player
+        const miniPlayer = document.getElementById('miniPlayer');
+        if (miniPlayer) {
+            miniPlayer.addEventListener('click', (e) => {
+                if (!e.target.closest('.mini-control-btn')) {
+                    this.openFullPlayer();
+                }
+            });
+        }
+
+        // Mobile full player close
+        document.getElementById('closePlayerBtn').addEventListener('click', () => {
+            this.closeFullPlayer();
+        });
+
+        // Player controls - Mobile
         document.getElementById('playPauseBtn').addEventListener('click', () => {
+            Player.togglePlayPause();
+        });
+
+        document.getElementById('miniPlayPauseBtn').addEventListener('click', (e) => {
+            e.stopPropagation();
             Player.togglePlayPause();
         });
 
@@ -62,31 +101,66 @@ const UI = {
             Player.toggleLoop();
         });
 
-        // Progress bar
+        // Player controls - Desktop
+        document.getElementById('desktopPlayPauseBtn').addEventListener('click', () => {
+            Player.togglePlayPause();
+        });
+
+        document.getElementById('desktopNextBtn').addEventListener('click', () => {
+            Player.playNext();
+        });
+
+        document.getElementById('desktopPrevBtn').addEventListener('click', () => {
+            Player.playPrevious();
+        });
+
+        document.getElementById('desktopShuffleBtn').addEventListener('click', () => {
+            Player.toggleShuffle();
+        });
+
+        document.getElementById('desktopLoopBtn').addEventListener('click', () => {
+            Player.toggleLoop();
+        });
+
+        // Progress bars
         document.getElementById('progressBar').addEventListener('click', (e) => {
             const rect = e.currentTarget.getBoundingClientRect();
             const percent = (e.clientX - rect.left) / rect.width;
             Player.seek(percent);
         });
 
-        // Volume
-        document.getElementById('volumeSlider').addEventListener('input', (e) => {
-            Player.setVolume(e.target.value / 100);
+        document.getElementById('desktopProgressBar').addEventListener('click', (e) => {
+            const rect = e.currentTarget.getBoundingClientRect();
+            const percent = (e.clientX - rect.left) / rect.width;
+            Player.seek(percent);
         });
 
-        // Queue drawer
+        // Queue button (desktop)
         document.getElementById('queueBtn').addEventListener('click', () => {
-            this.toggleQueue();
+            this.toggleQueueDrawer();
         });
 
         document.getElementById('closeQueueBtn').addEventListener('click', () => {
-            this.toggleQueue();
+            this.closeQueueDrawer();
+        });
+
+        // Queue button (mobile full player)
+        document.getElementById('playerQueueBtn').addEventListener('click', () => {
+            this.openMobileQueue();
+        });
+
+        // Mobile queue close
+        document.getElementById('closeMobileQueueBtn').addEventListener('click', () => {
+            this.closeMobileQueue();
         });
 
         // Search
-        document.getElementById('songsSearch').addEventListener('input', (e) => {
-            this.searchSongs(e.target.value);
-        });
+        const songsSearch = document.getElementById('songsSearch');
+        if (songsSearch) {
+            songsSearch.addEventListener('input', (e) => {
+                this.searchSongs(e.target.value);
+            });
+        }
 
         // Context menu
         document.getElementById('ctxPlayNext').addEventListener('click', () => {
@@ -103,9 +177,13 @@ const UI = {
             }
         });
 
-        // Close context menu on click outside
-        document.addEventListener('click', () => {
+        document.getElementById('ctxCancel').addEventListener('click', () => {
             this.hideContextMenu();
+        });
+
+        document.getElementById('overlay').addEventListener('click', () => {
+            this.hideContextMenu();
+            this.closeQueueDrawer();
         });
     },
 
@@ -114,8 +192,6 @@ const UI = {
      */
     async handleLogin() {
         const serverUrl = document.getElementById('serverUrl').value.trim();
-        
-        // Hardcoded credentials
         const username = 'kush';
         const password = '252349';
 
@@ -131,12 +207,8 @@ const UI = {
         }
     },
 
-    /**
-     * Load initial data after login
-     */
     async loadInitialData() {
         const playlists = await NavidromeAPI.getPlaylists();
-        this.renderPlaylistsSidebar(playlists);
         this.renderRecentPlaylists(playlists.slice(0, 6));
     },
 
@@ -144,8 +216,8 @@ const UI = {
      * VIEW NAVIGATION
      */
     showView(viewName) {
-        // Update nav
-        document.querySelectorAll('.nav-item').forEach(item => {
+        // Update both navigation bars
+        document.querySelectorAll('.bottom-nav .nav-item, .sidebar .sidebar-item').forEach(item => {
             item.classList.toggle('active', item.dataset.view === viewName);
         });
 
@@ -165,6 +237,18 @@ const UI = {
         if (viewId) {
             document.getElementById(viewId).classList.add('active');
             this.currentView = viewName;
+            
+            // Hide back button for main views
+            document.getElementById('backBtn').style.display = 'none';
+            this.viewHistory = [];
+
+            // Update header title
+            const titles = {
+                'home': 'Music',
+                'playlists': 'Library',
+                'songs': 'All Songs'
+            };
+            document.getElementById('headerTitle').textContent = titles[viewName];
 
             // Load data if needed
             if (viewName === 'playlists') {
@@ -175,27 +259,19 @@ const UI = {
         }
     },
 
+    navigateBack() {
+        if (this.viewHistory.length > 0) {
+            const previousView = this.viewHistory.pop();
+            this.showView(previousView);
+        }
+    },
+
     /**
      * PLAYLISTS RENDERING
      */
-    renderPlaylistsSidebar(playlists) {
-        const container = document.getElementById('playlistsList');
-        container.innerHTML = playlists.map(p => `
-            <div class="playlist-item" data-id="${p.id}">
-                ${p.name}
-            </div>
-        `).join('');
-
-        container.querySelectorAll('.playlist-item').forEach(item => {
-            item.addEventListener('click', () => {
-                this.showPlaylistDetail(item.dataset.id);
-            });
-        });
-    },
-
     renderRecentPlaylists(playlists) {
         const container = document.getElementById('recentPlaylists');
-        container.innerHTML = `<h2>Recent Playlists</h2>` + playlists.map(p => `
+        container.innerHTML = playlists.map(p => `
             <div class="card" data-id="${p.id}">
                 <div class="card-cover">
                     ${p.image ? `<img src="${p.image}" alt="${p.name}">` : ''}
@@ -241,6 +317,14 @@ const UI = {
 
         this.currentPlaylist = playlist;
 
+        // Save current view to history (mobile only)
+        if (window.innerWidth < 1024) {
+            if (this.viewHistory.length === 0 || this.viewHistory[this.viewHistory.length - 1] !== this.currentView) {
+                this.viewHistory.push(this.currentView);
+            }
+            document.getElementById('backBtn').style.display = 'flex';
+        }
+
         // Show detail view
         document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
         document.getElementById('playlistDetailView').classList.add('active');
@@ -251,6 +335,7 @@ const UI = {
 
         document.getElementById('playlistName').textContent = playlist.name;
         document.getElementById('playlistMeta').textContent = `${playlist.tracks.length} songs`;
+        document.getElementById('headerTitle').textContent = playlist.name;
 
         // Render tracks
         this.renderPlaylistTracks(playlist.tracks);
@@ -259,39 +344,49 @@ const UI = {
         document.getElementById('playPlaylistBtn').onclick = () => {
             Player.createQueueFromPlaylist(playlist.tracks);
             Player.playTrackAtIndex(0);
+            this.showMiniPlayer();
         };
 
         document.getElementById('shufflePlaylistBtn').onclick = () => {
             Player.createShuffledQueue(playlist.tracks);
             Player.playTrackAtIndex(0);
+            this.showMiniPlayer();
         };
     },
 
     renderPlaylistTracks(tracks) {
         const container = document.getElementById('tracksList');
         container.innerHTML = tracks.map((track, index) => `
-            <div class="track-row" data-index="${index}">
-                <div class="track-col track-num">${index + 1}</div>
-                <div class="track-col track-title">${track.name}</div>
-                <div class="track-col track-artist">${track.artist.name}</div>
-                <div class="track-col track-album">${track.album.name}</div>
-                <div class="track-col track-duration">${this.formatDuration(track.duration_ms)}</div>
-            </div>
+            <li class="track-item ${Player.currentTrack && Player.currentTrack.id === track.id ? 'playing' : ''}" data-index="${index}">
+                <div class="track-number">${index + 1}</div>
+                ${track.album.image ? `
+                    <div class="track-cover">
+                        <img src="${track.album.image}" alt="">
+                    </div>
+                ` : ''}
+                <div class="track-info">
+                    <div class="track-title">${track.name}</div>
+                    <div class="track-artist">${track.artist.name}</div>
+                </div>
+                <div class="track-menu">
+                    <i class="fas fa-ellipsis-v"></i>
+                </div>
+            </li>
         `).join('');
 
-        container.querySelectorAll('.track-row').forEach(row => {
-            row.addEventListener('click', () => {
-                const index = parseInt(row.dataset.index);
-                if (Player.queue.length === 0 || Player.originalPlaylist !== tracks) {
-                    Player.createQueueFromPlaylist(tracks);
+        container.querySelectorAll('.track-item').forEach(item => {
+            const index = parseInt(item.dataset.index);
+            
+            item.addEventListener('click', (e) => {
+                if (e.target.closest('.track-menu')) {
+                    this.showContextMenu(e, tracks[index]);
+                } else {
+                    if (Player.queue.length === 0 || Player.originalPlaylist !== tracks) {
+                        Player.createQueueFromPlaylist(tracks);
+                    }
+                    Player.playTrackAtIndex(index);
+                    this.showMiniPlayer();
                 }
-                Player.playTrackAtIndex(index);
-            });
-
-            row.addEventListener('contextmenu', (e) => {
-                e.preventDefault();
-                const index = parseInt(row.dataset.index);
-                this.showContextMenu(e, tracks[index]);
             });
         });
     },
@@ -308,8 +403,8 @@ const UI = {
 
     renderSongs(songs) {
         const container = document.getElementById('songsGrid');
-        container.innerHTML = songs.map(song => `
-            <div class="card" data-id="${song.id}">
+        container.innerHTML = songs.map((song, index) => `
+            <div class="card" data-index="${index}">
                 <div class="card-cover">
                     ${song.album.image ? `<img src="${song.album.image}">` : ''}
                 </div>
@@ -322,11 +417,7 @@ const UI = {
             card.addEventListener('click', () => {
                 Player.createQueueFromPlaylist(songs);
                 Player.playTrackAtIndex(index);
-            });
-
-            card.addEventListener('contextmenu', (e) => {
-                e.preventDefault();
-                this.showContextMenu(e, songs[index]);
+                this.showMiniPlayer();
             });
         });
     },
@@ -346,69 +437,185 @@ const UI = {
     },
 
     /**
-     * PLAYER UI UPDATES
+     * PLAYER UI UPDATES - Unified for mobile and desktop
      */
-    updatePlayerInfo(track) {
+    showMiniPlayer() {
+        document.getElementById('miniPlayer').style.display = 'flex';
+    },
+
+    openFullPlayer() {
+        document.getElementById('fullPlayer').classList.add('active');
+    },
+
+    closeFullPlayer() {
+        document.getElementById('fullPlayer').classList.remove('active');
+    },
+
+    updateAllPlayerInfo(track) {
         if (!track) {
+            // Mobile mini player
+            document.getElementById('miniPlayerTitle').textContent = 'No track';
+            document.getElementById('miniPlayerArtist').textContent = 'Select a song';
+            document.getElementById('miniPlayerCover').innerHTML = '';
+            
+            // Mobile full player
             document.getElementById('playerTitle').textContent = 'No track playing';
             document.getElementById('playerArtist').textContent = 'Select a song';
-            document.getElementById('playerCover').innerHTML = '';
+            document.getElementById('playerArtwork').innerHTML = '';
+            
+            // Desktop player bar
+            document.getElementById('desktopPlayerTitle').textContent = 'No track';
+            document.getElementById('desktopPlayerArtist').textContent = 'Select a song';
+            document.getElementById('desktopPlayerCover').innerHTML = '';
             return;
         }
 
+        // Mobile mini player
+        document.getElementById('miniPlayerTitle').textContent = track.name;
+        document.getElementById('miniPlayerArtist').textContent = track.artist.name;
+        document.getElementById('miniPlayerCover').innerHTML = track.album.image ? `<img src="${track.album.image}">` : '';
+
+        // Mobile full player
         document.getElementById('playerTitle').textContent = track.name;
         document.getElementById('playerArtist').textContent = track.artist.name;
-        
-        const cover = document.getElementById('playerCover');
-        cover.innerHTML = track.album.image ? `<img src="${track.album.image}">` : '';
+        document.getElementById('playerArtwork').innerHTML = track.album.image ? `<img src="${track.album.image}">` : '';
+
+        // Desktop player bar
+        document.getElementById('desktopPlayerTitle').textContent = track.name;
+        document.getElementById('desktopPlayerArtist').textContent = track.artist.name;
+        document.getElementById('desktopPlayerCover').innerHTML = track.album.image ? `<img src="${track.album.image}">` : '';
     },
 
-    updateProgress(percent, current, total) {
+    updateAllProgress(percent, current, total) {
+        // Mobile full player
         document.getElementById('progressFill').style.width = `${percent}%`;
         document.getElementById('timeCurrent').textContent = Player.formatTime(current);
         document.getElementById('timeTotal').textContent = Player.formatTime(total);
+
+        // Desktop player bar
+        document.getElementById('desktopProgressFill').style.width = `${percent}%`;
+        document.getElementById('desktopTimeCurrent').textContent = Player.formatTime(current);
+        document.getElementById('desktopTimeTotal').textContent = Player.formatTime(total);
     },
 
-    updateShuffleButton() {
-        const btn = document.getElementById('shuffleBtn');
-        btn.classList.toggle('active', Player.isShuffled);
+    updateShuffleButtons() {
+        // Mobile
+        const mobileBtn = document.getElementById('shuffleBtn');
+        mobileBtn.classList.toggle('active', Player.isShuffled);
+
+        // Desktop
+        const desktopBtn = document.getElementById('desktopShuffleBtn');
+        desktopBtn.classList.toggle('active', Player.isShuffled);
     },
 
-    updateLoopButton() {
-        const btn = document.getElementById('loopBtn');
-        const icon = btn.querySelector('i');
-        
-        btn.classList.toggle('active', Player.loopMode !== 'off');
-        icon.className = Player.loopMode === 'one' ? 'fas fa-redo-alt' : 'fas fa-redo';
+    updateLoopButtons() {
+        // Mobile
+        const mobileBtn = document.getElementById('loopBtn');
+        const mobileIcon = mobileBtn.querySelector('i');
+        mobileBtn.classList.toggle('active', Player.loopMode !== 'off');
+        mobileIcon.className = Player.loopMode === 'one' ? 'fas fa-redo-alt' : 'fas fa-redo';
+
+        // Desktop
+        const desktopBtn = document.getElementById('desktopLoopBtn');
+        const desktopIcon = desktopBtn.querySelector('i');
+        desktopBtn.classList.toggle('active', Player.loopMode !== 'off');
+        desktopIcon.className = Player.loopMode === 'one' ? 'fas fa-redo-alt' : 'fas fa-redo';
     },
 
     /**
-     * QUEUE DRAWER
+     * QUEUE MANAGEMENT
      */
-    toggleQueue() {
-        document.getElementById('queueDrawer').classList.toggle('active');
-        this.renderQueue();
+    toggleQueueDrawer() {
+        const drawer = document.getElementById('queueDrawer');
+        const isActive = drawer.classList.contains('active');
+        
+        if (isActive) {
+            this.closeQueueDrawer();
+        } else {
+            drawer.classList.add('active');
+            document.getElementById('overlay').classList.add('active');
+            this.renderQueue();
+        }
+    },
+
+    closeQueueDrawer() {
+        document.getElementById('queueDrawer').classList.remove('active');
+    },
+
+    openMobileQueue() {
+        document.getElementById('mobileQueueOverlay').classList.add('active');
+        this.renderMobileQueue();
+    },
+
+    closeMobileQueue() {
+        document.getElementById('mobileQueueOverlay').classList.remove('active');
     },
 
     renderQueue() {
-        const nowPlaying = document.getElementById('nowPlaying');
-        const nextInQueue = document.getElementById('nextInQueue');
-
-        if (Player.currentIndex >= 0 && Player.queue[Player.currentIndex]) {
-            nowPlaying.innerHTML = this.renderQueueItem(Player.queue[Player.currentIndex], Player.currentIndex);
-        } else {
-            nowPlaying.innerHTML = '<p>No track playing</p>';
+        const content = document.getElementById('queueContent');
+        
+        if (Player.queue.length === 0) {
+            content.innerHTML = '<p class="queue-empty">Queue is empty</p>';
+            return;
         }
 
-        const upcoming = Player.queue.slice(Player.currentIndex + 1);
-        nextInQueue.innerHTML = upcoming.map((track, i) => 
-            this.renderQueueItem(track, Player.currentIndex + 1 + i)
-        ).join('');
+        let html = '';
+        
+        // Now Playing section
+        if (Player.currentIndex >= 0 && Player.currentIndex < Player.queue.length) {
+            html += '<div class="queue-section-title">Now Playing</div>';
+            const track = Player.queue[Player.currentIndex];
+            html += this.renderQueueItem(track, Player.currentIndex, true);
+        }
+        
+        // Next from Queue section
+        const upcomingTracks = Player.queue.slice(Player.currentIndex + 1);
+        if (upcomingTracks.length > 0) {
+            html += '<div class="queue-section-title">Next From Queue</div>';
+            upcomingTracks.forEach((track, idx) => {
+                const actualIndex = Player.currentIndex + 1 + idx;
+                html += this.renderQueueItem(track, actualIndex, false);
+            });
+        }
+
+        content.innerHTML = html;
+        this.attachQueueItemListeners(content);
     },
 
-    renderQueueItem(track, index) {
+    renderMobileQueue() {
+        const content = document.getElementById('mobileQueueContent');
+        
+        if (Player.queue.length === 0) {
+            content.innerHTML = '<p class="queue-empty">Queue is empty</p>';
+            return;
+        }
+
+        let html = '';
+        
+        // Now Playing section
+        if (Player.currentIndex >= 0 && Player.currentIndex < Player.queue.length) {
+            html += '<div class="queue-section-title">Now Playing</div>';
+            const track = Player.queue[Player.currentIndex];
+            html += this.renderQueueItem(track, Player.currentIndex, true);
+        }
+        
+        // Next from Queue section
+        const upcomingTracks = Player.queue.slice(Player.currentIndex + 1);
+        if (upcomingTracks.length > 0) {
+            html += '<div class="queue-section-title">Next From Queue</div>';
+            upcomingTracks.forEach((track, idx) => {
+                const actualIndex = Player.currentIndex + 1 + idx;
+                html += this.renderQueueItem(track, actualIndex, false);
+            });
+        }
+
+        content.innerHTML = html;
+        this.attachQueueItemListeners(content);
+    },
+
+    renderQueueItem(track, index, isActive) {
         return `
-            <div class="queue-item" data-index="${index}">
+            <div class="queue-item ${isActive ? 'active' : ''}" data-index="${index}">
                 <div class="queue-item-cover">
                     ${track.album.image ? `<img src="${track.album.image}">` : ''}
                 </div>
@@ -416,35 +623,57 @@ const UI = {
                     <div class="queue-item-title">${track.name}</div>
                     <div class="queue-item-artist">${track.artist.name}</div>
                 </div>
+                ${!isActive ? `
+                    <button class="queue-item-remove" data-remove="${index}">
+                        <i class="fas fa-times"></i>
+                    </button>
+                ` : ''}
             </div>
         `;
+    },
+
+    attachQueueItemListeners(container) {
+        // Click to play
+        container.querySelectorAll('.queue-item').forEach(item => {
+            const index = parseInt(item.dataset.index);
+            item.addEventListener('click', (e) => {
+                if (!e.target.closest('.queue-item-remove')) {
+                    Player.playTrackAtIndex(index);
+                }
+            });
+        });
+
+        // Remove buttons
+        container.querySelectorAll('.queue-item-remove').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const index = parseInt(btn.dataset.remove);
+                Player.removeFromQueue(index);
+                
+                // Re-render both queues to stay in sync
+                if (window.innerWidth >= 1024) {
+                    this.renderQueue();
+                } else {
+                    this.renderMobileQueue();
+                }
+            });
+        });
     },
 
     /**
      * CONTEXT MENU
      */
     showContextMenu(event, track) {
-        const menu = document.getElementById('contextMenu');
+        event.stopPropagation();
         this.contextMenuTrack = track;
-
-        menu.style.left = `${event.pageX}px`;
-        menu.style.top = `${event.pageY}px`;
-        menu.classList.add('active');
+        document.getElementById('overlay').classList.add('active');
+        document.getElementById('contextMenu').classList.add('active');
     },
 
     hideContextMenu() {
+        document.getElementById('overlay').classList.remove('active');
         document.getElementById('contextMenu').classList.remove('active');
         this.contextMenuTrack = null;
-    },
-
-    /**
-     * HELPERS
-     */
-    formatDuration(ms) {
-        const seconds = Math.floor(ms / 1000);
-        const mins = Math.floor(seconds / 60);
-        const secs = seconds % 60;
-        return `${mins}:${secs.toString().padStart(2, '0')}`;
     }
 };
 

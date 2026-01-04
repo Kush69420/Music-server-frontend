@@ -1,5 +1,6 @@
 /**
  * PLAYER.JS - Playback & Queue Management
+ * Enhanced for Responsive Design
  * 
  * CRITICAL RULES:
  * 1. Queue is INDEPENDENT of playlist
@@ -15,13 +16,13 @@ const Player = {
     isPlaying: false,
     
     // Queue state
-    originalPlaylist: [],    // Original playlist order (IMMUTABLE)
-    queue: [],              // Active playback queue (can be shuffled)
+    originalPlaylist: [],
+    queue: [],
     currentIndex: -1,
     
     // Playback modes
     isShuffled: false,
-    loopMode: 'off',       // 'off', 'all', 'one'
+    loopMode: 'off',
 
     /**
      * Initialize player
@@ -45,12 +46,12 @@ const Player = {
 
         this.audio.addEventListener('play', () => {
             this.isPlaying = true;
-            this.updatePlayPauseButton();
+            this.updatePlayPauseButtons();
         });
 
         this.audio.addEventListener('pause', () => {
             this.isPlaying = false;
-            this.updatePlayPauseButton();
+            this.updatePlayPauseButtons();
         });
 
         this.audio.addEventListener('error', (e) => {
@@ -60,44 +61,22 @@ const Player = {
 
     /**
      * QUEUE MANAGEMENT
-     * 
-     * Rule: Queue is separate from playlist
-     * Playlist order NEVER changes
      */
 
-    /**
-     * Create queue from playlist (normal play)
-     */
     createQueueFromPlaylist(tracks) {
-        // Store original order (IMMUTABLE)
         this.originalPlaylist = [...tracks];
-        
-        // Create queue as copy
         this.queue = [...tracks];
-        
-        // Reset state
         this.currentIndex = 0;
         this.isShuffled = false;
     },
 
-    /**
-     * Create shuffled queue from playlist
-     */
     createShuffledQueue(tracks) {
-        // Store original order (IMMUTABLE)
         this.originalPlaylist = [...tracks];
-        
-        // Create shuffled queue
         this.queue = this.shuffleArray([...tracks]);
-        
-        // Reset state
         this.currentIndex = 0;
         this.isShuffled = true;
     },
 
-    /**
-     * Fisher-Yates shuffle algorithm
-     */
     shuffleArray(array) {
         const shuffled = [...array];
         for (let i = shuffled.length - 1; i > 0; i--) {
@@ -107,28 +86,21 @@ const Player = {
         return shuffled;
     },
 
-    /**
-     * Toggle shuffle mode
-     */
     toggleShuffle() {
         if (this.queue.length === 0) return;
 
         if (!this.isShuffled) {
-            // Enable shuffle
             const currentTrack = this.queue[this.currentIndex];
             this.queue = this.shuffleArray([...this.originalPlaylist]);
             
-            // Find current track in new shuffle
             if (currentTrack) {
                 this.currentIndex = this.queue.findIndex(t => t.id === currentTrack.id);
             }
             this.isShuffled = true;
         } else {
-            // Disable shuffle - restore original order
             const currentTrack = this.queue[this.currentIndex];
             this.queue = [...this.originalPlaylist];
             
-            // Find current track in original order
             if (currentTrack) {
                 this.currentIndex = this.queue.findIndex(t => t.id === currentTrack.id);
             }
@@ -136,14 +108,22 @@ const Player = {
         }
 
         if (typeof UI !== 'undefined') {
-            UI.updateShuffleButton();
-            UI.renderQueue();
+            UI.updateShuffleButtons();
+            // Update both desktop and mobile queue
+            if (window.innerWidth >= 1024) {
+                const drawer = document.getElementById('queueDrawer');
+                if (drawer && drawer.classList.contains('active')) {
+                    UI.renderQueue();
+                }
+            } else {
+                const mobileQueue = document.getElementById('mobileQueueOverlay');
+                if (mobileQueue && mobileQueue.classList.contains('active')) {
+                    UI.renderMobileQueue();
+                }
+            }
         }
     },
 
-    /**
-     * Toggle loop mode
-     */
     toggleLoop() {
         if (this.loopMode === 'off') {
             this.loopMode = 'all';
@@ -153,7 +133,7 @@ const Player = {
             this.loopMode = 'off';
         }
         if (typeof UI !== 'undefined') {
-            UI.updateLoopButton();
+            UI.updateLoopButtons();
         }
     },
 
@@ -161,9 +141,6 @@ const Player = {
      * PLAYBACK CONTROLS
      */
 
-    /**
-     * Play track at queue index
-     */
     playTrackAtIndex(index) {
         if (index < 0 || index >= this.queue.length) return;
 
@@ -171,20 +148,26 @@ const Player = {
         const track = this.queue[index];
         this.currentTrack = track;
 
-        // Set audio source
         this.audio.src = NavidromeAPI.getStreamUrl(track.id);
         this.audio.play().catch(err => console.error('Play error:', err));
 
-        // Update UI
         if (typeof UI !== 'undefined') {
-            UI.updatePlayerInfo(track);
-            UI.renderQueue();
+            UI.updateAllPlayerInfo(track);
+            // Update both desktop and mobile queue
+            if (window.innerWidth >= 1024) {
+                const drawer = document.getElementById('queueDrawer');
+                if (drawer && drawer.classList.contains('active')) {
+                    UI.renderQueue();
+                }
+            } else {
+                const mobileQueue = document.getElementById('mobileQueueOverlay');
+                if (mobileQueue && mobileQueue.classList.contains('active')) {
+                    UI.renderMobileQueue();
+                }
+            }
         }
     },
 
-    /**
-     * Toggle play/pause
-     */
     togglePlayPause() {
         if (this.currentIndex === -1 && this.queue.length > 0) {
             this.playTrackAtIndex(0);
@@ -198,9 +181,6 @@ const Player = {
         }
     },
 
-    /**
-     * Play next track (called by next button)
-     */
     playNext() {
         if (this.loopMode === 'one') {
             this.audio.currentTime = 0;
@@ -215,16 +195,10 @@ const Player = {
         }
     },
 
-    /**
-     * Called when track ends naturally
-     */
     onTrackEnded() {
         this.playNext();
     },
 
-    /**
-     * Play previous track
-     */
     playPrevious() {
         if (this.audio.currentTime > 3) {
             this.audio.currentTime = 0;
@@ -239,33 +213,45 @@ const Player = {
      * QUEUE MANIPULATION
      */
 
-    /**
-     * Add track to play next
-     */
     addTrackPlayNext(track) {
         const insertIndex = this.currentIndex + 1;
         this.queue.splice(insertIndex, 0, track);
         if (typeof UI !== 'undefined') {
-            UI.renderQueue();
+            // Update the appropriate queue view
+            if (window.innerWidth >= 1024) {
+                const drawer = document.getElementById('queueDrawer');
+                if (drawer && drawer.classList.contains('active')) {
+                    UI.renderQueue();
+                }
+            } else {
+                const mobileQueue = document.getElementById('mobileQueueOverlay');
+                if (mobileQueue && mobileQueue.classList.contains('active')) {
+                    UI.renderMobileQueue();
+                }
+            }
         }
     },
 
-    /**
-     * Add track to end of queue
-     */
     addToQueue(track) {
         this.queue.push(track);
         if (typeof UI !== 'undefined') {
-            UI.renderQueue();
+            // Update the appropriate queue view
+            if (window.innerWidth >= 1024) {
+                const drawer = document.getElementById('queueDrawer');
+                if (drawer && drawer.classList.contains('active')) {
+                    UI.renderQueue();
+                }
+            } else {
+                const mobileQueue = document.getElementById('mobileQueueOverlay');
+                if (mobileQueue && mobileQueue.classList.contains('active')) {
+                    UI.renderMobileQueue();
+                }
+            }
         }
     },
 
-    /**
-     * Remove track from queue
-     */
     removeFromQueue(index) {
         if (index === this.currentIndex) {
-            // Removing current track
             this.queue.splice(index, 1);
             if (this.queue.length > 0) {
                 if (index >= this.queue.length) {
@@ -281,55 +267,63 @@ const Player = {
             }
             this.queue.splice(index, 1);
         }
-        if (typeof UI !== 'undefined') {
-            UI.renderQueue();
-        }
+        // UI will re-render from the UI component after this
     },
 
-    /**
-     * Stop playback
-     */
     stop() {
         this.audio.pause();
         this.audio.src = '';
         this.currentTrack = null;
         this.currentIndex = -1;
         if (typeof UI !== 'undefined') {
-            UI.updatePlayerInfo(null);
+            UI.updateAllPlayerInfo(null);
         }
     },
 
-    /**
-     * Seek to position
-     */
     seek(percent) {
         if (this.audio.duration) {
             this.audio.currentTime = percent * this.audio.duration;
         }
     },
 
-    /**
-     * Set volume (0-1)
-     */
     setVolume(volume) {
         this.audio.volume = Math.max(0, Math.min(1, volume));
     },
 
     /**
-     * UI UPDATE CALLBACKS
+     * UI UPDATE CALLBACKS - Enhanced for responsive design
      */
 
     onTimeUpdate() {
         if (this.audio.duration && typeof UI !== 'undefined') {
             const percent = (this.audio.currentTime / this.audio.duration) * 100;
-            UI.updateProgress(percent, this.audio.currentTime, this.audio.duration);
+            UI.updateAllProgress(percent, this.audio.currentTime, this.audio.duration);
         }
     },
 
-    updatePlayPauseButton() {
-        const btn = document.getElementById('playPauseBtn');
-        if (btn) {
-            const icon = btn.querySelector('i');
+    updatePlayPauseButtons() {
+        // Mobile full player
+        const mobileBtn = document.getElementById('playPauseBtn');
+        if (mobileBtn) {
+            const icon = mobileBtn.querySelector('i');
+            if (icon) {
+                icon.className = this.isPlaying ? 'fas fa-pause' : 'fas fa-play';
+            }
+        }
+
+        // Mobile mini player
+        const miniBtn = document.getElementById('miniPlayPauseBtn');
+        if (miniBtn) {
+            const icon = miniBtn.querySelector('i');
+            if (icon) {
+                icon.className = this.isPlaying ? 'fas fa-pause' : 'fas fa-play';
+            }
+        }
+
+        // Desktop player bar
+        const desktopBtn = document.getElementById('desktopPlayPauseBtn');
+        if (desktopBtn) {
+            const icon = desktopBtn.querySelector('i');
             if (icon) {
                 icon.className = this.isPlaying ? 'fas fa-pause' : 'fas fa-play';
             }
