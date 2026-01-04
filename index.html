@@ -159,14 +159,25 @@
 
         <!-- Mobile Mini Player -->
         <div class="mini-player" id="miniPlayer" style="display: none;">
-            <div class="mini-player-cover" id="miniPlayerCover"></div>
-            <div class="mini-player-info">
-                <div class="mini-player-title" id="miniPlayerTitle">No track</div>
-                <div class="mini-player-artist" id="miniPlayerArtist">Select a song</div>
+            <div class="mini-player-track" id="miniPlayerTrack">
+                <div class="mini-player-cover" id="miniPlayerCover"></div>
+                <div class="mini-player-info">
+                    <div class="mini-player-title" id="miniPlayerTitle">No track</div>
+                    <div class="mini-player-artist" id="miniPlayerArtist">Select a song</div>
+                </div>
             </div>
             <div class="mini-player-controls">
-                <button class="mini-control-btn" id="miniPlayPauseBtn">
+                <button class="mini-control-btn" id="miniPrevBtn">
+                    <i class="fas fa-step-backward"></i>
+                </button>
+                <button class="mini-control-btn mini-control-play" id="miniPlayPauseBtn">
                     <i class="fas fa-play"></i>
+                </button>
+                <button class="mini-control-btn" id="miniNextBtn">
+                    <i class="fas fa-step-forward"></i>
+                </button>
+                <button class="mini-control-btn" id="miniQueueBtn">
+                    <i class="fas fa-list"></i>
                 </button>
             </div>
         </div>

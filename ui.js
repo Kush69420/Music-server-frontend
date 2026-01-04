@@ -60,13 +60,11 @@ const UI = {
             this.navigateBack();
         });
 
-        // Mobile mini player - tap to open full player
-        const miniPlayer = document.getElementById('miniPlayer');
-        if (miniPlayer) {
-            miniPlayer.addEventListener('click', (e) => {
-                if (!e.target.closest('.mini-control-btn')) {
-                    this.openFullPlayer();
-                }
+        // Mobile mini player - tap track area to open full player
+        const miniPlayerTrack = document.getElementById('miniPlayerTrack');
+        if (miniPlayerTrack) {
+            miniPlayerTrack.addEventListener('click', () => {
+                this.openFullPlayer();
             });
         }
 
@@ -75,13 +73,29 @@ const UI = {
             this.closeFullPlayer();
         });
 
-        // Player controls - Mobile
-        document.getElementById('playPauseBtn').addEventListener('click', () => {
+        // Mobile mini player controls
+        document.getElementById('miniPlayPauseBtn').addEventListener('click', (e) => {
+            e.stopPropagation();
             Player.togglePlayPause();
         });
 
-        document.getElementById('miniPlayPauseBtn').addEventListener('click', (e) => {
+        document.getElementById('miniPrevBtn').addEventListener('click', (e) => {
             e.stopPropagation();
+            Player.playPrevious();
+        });
+
+        document.getElementById('miniNextBtn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            Player.playNext();
+        });
+
+        document.getElementById('miniQueueBtn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.openMobileQueue();
+        });
+
+        // Player controls - Mobile
+        document.getElementById('playPauseBtn').addEventListener('click', () => {
             Player.togglePlayPause();
         });
 
