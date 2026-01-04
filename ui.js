@@ -114,8 +114,10 @@ const UI = {
      */
     async handleLogin() {
         const serverUrl = document.getElementById('serverUrl').value.trim();
-        const username = document.getElementById('username').value.trim();
-        const password = document.getElementById('password').value;
+        
+        // Hardcoded credentials
+        const username = 'kush';
+        const password = '252349';
 
         const success = await NavidromeAPI.connect(serverUrl, username, password);
 
@@ -124,7 +126,7 @@ const UI = {
             await this.loadInitialData();
         } else {
             const errorMsg = document.getElementById('loginError');
-            errorMsg.textContent = 'Connection failed. Check credentials.';
+            errorMsg.textContent = 'Connection failed. Check server URL.';
             errorMsg.classList.add('active');
         }
     },
