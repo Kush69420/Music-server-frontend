@@ -13,16 +13,16 @@
 </head>
 <body>
     <div class="app-container">
-        <!-- Login Modal -->
-        <div id="loginModal" class="modal active">
+        <!-- Login Modal (hidden by default, shown only if no saved URL) -->
+        <div id="loginModal" class="modal">
             <div class="modal-content">
-                <h2><i class="fas fa-music"></i> Connect</h2>
+                <h2><i class="fas fa-music"></i> Connect to Navidrome</h2>
                 <form id="loginForm">
                     <div class="form-group">
                         <label for="serverUrl">Server URL</label>
                         <input type="url" id="serverUrl" placeholder="http://192.168.1.100:4533" required>
                         <small style="color: #b3b3b3; font-size: 0.75rem; display: block; margin-top: 0.25rem;">
-                            Enter your Navidrome server address
+                            This will be saved for future sessions
                         </small>
                     </div>
                     <button type="submit" class="btn btn-primary">Connect</button>

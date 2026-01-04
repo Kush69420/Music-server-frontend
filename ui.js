@@ -1,5 +1,6 @@
 /**
  * UI.JS - Responsive Mobile & Desktop Interface Logic
+ * Enhanced with Server URL Persistence
  */
 
 const UI = {
@@ -16,6 +17,46 @@ const UI = {
         this.setupEventListeners();
         this.detectLayoutMode();
         window.addEventListener('resize', () => this.detectLayoutMode());
+        
+        // Check for saved server URL and auto-connect
+        await this.autoConnectIfPossible();
+    },
+
+    /**
+     * Auto-connect if server URL is saved
+     */
+    async autoConnectIfPossible() {
+        const loginModal = document.getElementById('loginModal');
+        const savedUrl = NavidromeAPI.loadSavedServerUrl();
+        
+        if (savedUrl) {
+            console.log('Found saved server URL:', savedUrl);
+            
+            // Pre-fill the server URL field
+            document.getElementById('serverUrl').value = savedUrl;
+            
+            // Auto-connect with saved URL
+            const username = 'kush';
+            const password = '252349';
+            
+            console.log('Attempting auto-connect...');
+            const success = await NavidromeAPI.connect(savedUrl, username, password);
+            
+            if (success) {
+                console.log('Auto-connect successful!');
+                // Hide login modal
+                loginModal.classList.remove('active');
+                await this.loadInitialData();
+            } else {
+                console.log('Auto-connect failed, showing login modal');
+                // Connection failed with saved URL - show login modal
+                loginModal.classList.add('active');
+            }
+        } else {
+            console.log('No saved URL found, showing login modal');
+            // No saved URL - show login modal
+            loginModal.classList.add('active');
+        }
     },
 
     /**

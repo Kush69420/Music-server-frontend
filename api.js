@@ -5,6 +5,7 @@
  * 1. Navidrome authentication (token-based)
  * 2. All /rest/... API calls
  * 3. Data mapping from Navidrome to Spotify-like structure
+ * 4. Server URL persistence via localStorage
  * 
  * RULES:
  * - DO NOT modify authentication logic
@@ -18,6 +19,27 @@ const NavidromeAPI = {
     username: '',
     token: '',
     salt: '',
+
+    /**
+     * Load saved server URL from localStorage
+     */
+    loadSavedServerUrl() {
+        return localStorage.getItem('navidrome_server_url');
+    },
+
+    /**
+     * Save server URL to localStorage
+     */
+    saveServerUrl(url) {
+        localStorage.setItem('navidrome_server_url', url);
+    },
+
+    /**
+     * Clear saved server URL (for logout/reset)
+     */
+    clearSavedServerUrl() {
+        localStorage.removeItem('navidrome_server_url');
+    },
 
     /**
      * Generate random salt for MD5 authentication
@@ -57,6 +79,7 @@ const NavidromeAPI = {
      */
     async connect(serverUrl, username, password) {
         try {
+            console.log('Connecting to:', serverUrl);
             this.serverUrl = serverUrl;
             this.username = username;
             this.salt = this.generateSalt();
@@ -66,7 +89,17 @@ const NavidromeAPI = {
             const response = await fetch(url);
             const data = await response.json();
 
-            return data['subsonic-response'].status === 'ok';
+            const success = data['subsonic-response'].status === 'ok';
+            
+            // Save server URL to localStorage on successful connection
+            if (success) {
+                console.log('Connection successful, saving URL to localStorage');
+                this.saveServerUrl(serverUrl);
+            } else {
+                console.log('Connection failed, status:', data['subsonic-response'].status);
+            }
+            
+            return success;
         } catch (error) {
             console.error('Connection error:', error);
             return false;
