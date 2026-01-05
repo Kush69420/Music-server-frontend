@@ -13,7 +13,7 @@
 </head>
 <body>
     <div class="app-container">
-        <!-- Login Modal (hidden by default, shown only if no saved URL) -->
+        <!-- Login Modal -->
         <div id="loginModal" class="modal">
             <div class="modal-content">
                 <h2><i class="fas fa-music"></i> Connect to Navidrome</h2>
@@ -55,7 +55,7 @@
 
         <!-- Main Layout Wrapper -->
         <div class="main-wrapper">
-            <!-- Top Header (Mobile + Desktop) -->
+            <!-- Top Header -->
             <div class="top-header">
                 <button class="icon-btn back-btn" id="backBtn" style="display: none;">
                     <i class="fas fa-chevron-left"></i>
@@ -285,9 +285,99 @@
                 <i class="fas fa-plus"></i>
                 <span>Add to Queue</span>
             </div>
+            <div class="context-item" id="ctxAddToPlaylist">
+                <i class="fas fa-list-ul"></i>
+                <span>Add to Playlist</span>
+            </div>
+            <div class="context-item" id="ctxRemoveFromPlaylist" style="display: none;">
+                <i class="fas fa-trash"></i>
+                <span>Remove from Playlist</span>
+            </div>
+            <div class="context-item" id="ctxMoveUp" style="display: none;">
+                <i class="fas fa-arrow-up"></i>
+                <span>Move Up</span>
+            </div>
+            <div class="context-item" id="ctxMoveDown" style="display: none;">
+                <i class="fas fa-arrow-down"></i>
+                <span>Move Down</span>
+            </div>
             <div class="context-item" id="ctxCancel">
                 <i class="fas fa-times"></i>
                 <span>Cancel</span>
+            </div>
+        </div>
+
+        <!-- Add to Playlist Modal -->
+        <div class="bottom-sheet-modal" id="addToPlaylistModal">
+            <div class="modal-sheet-content">
+                <div class="modal-sheet-header">
+                    <h3>Add to Playlist</h3>
+                    <button class="icon-btn" id="closeAddToPlaylistBtn">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-sheet-body" id="addToPlaylistList"></div>
+            </div>
+        </div>
+
+        <!-- New Playlist Modal -->
+        <div class="bottom-sheet-modal" id="newPlaylistModal">
+            <div class="modal-sheet-content">
+                <div class="modal-sheet-header">
+                    <h3>Create New Playlist</h3>
+                    <button class="icon-btn" id="closeNewPlaylistBtn">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-sheet-body">
+                    <form id="newPlaylistForm">
+                        <div class="form-group">
+                            <label for="newPlaylistName">Playlist Name</label>
+                            <input type="text" id="newPlaylistName" placeholder="My Playlist" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Create Playlist</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Edit Playlist Name Modal -->
+        <div class="bottom-sheet-modal" id="editNameModal">
+            <div class="modal-sheet-content">
+                <div class="modal-sheet-header">
+                    <h3>Edit Playlist Name</h3>
+                    <button class="icon-btn" id="closeEditNameBtn">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-sheet-body">
+                    <form id="editNameForm">
+                        <div class="form-group">
+                            <label for="editPlaylistName">New Name</label>
+                            <input type="text" id="editPlaylistName" placeholder="Playlist name" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Delete Confirmation Modal -->
+        <div class="bottom-sheet-modal" id="deleteConfirmModal">
+            <div class="modal-sheet-content">
+                <div class="modal-sheet-header">
+                    <h3>Delete Playlist</h3>
+                </div>
+                <div class="modal-sheet-body">
+                    <p class="delete-warning">
+                        Are you sure you want to delete "<span id="deletePlaylistName"></span>"? 
+                        This action cannot be undone.
+                    </p>
+                    <div class="modal-actions">
+                        <button class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
+                        <button class="btn btn-secondary" id="cancelDeleteBtn">Cancel</button>
+                    </div>
+                </div>
             </div>
         </div>
 

@@ -1,11 +1,13 @@
 /**
  * API.JS - Navidrome API Integration & Data Mapping
+ * Enhanced with Playlist Editing Capabilities
  * 
  * This module handles:
  * 1. Navidrome authentication (token-based)
  * 2. All /rest/... API calls
  * 3. Data mapping from Navidrome to Spotify-like structure
  * 4. Server URL persistence via localStorage
+ * 5. Playlist CRUD operations
  * 
  * RULES:
  * - DO NOT modify authentication logic
@@ -91,7 +93,6 @@ const NavidromeAPI = {
 
             const success = data['subsonic-response'].status === 'ok';
             
-            // Save server URL to localStorage on successful connection
             if (success) {
                 console.log('Connection successful, saving URL to localStorage');
                 this.saveServerUrl(serverUrl);
@@ -122,7 +123,7 @@ const NavidromeAPI = {
                 image: navidromeTrack.coverArt ? this.getCoverArtUrl(navidromeTrack.coverArt) : null
             },
             duration_ms: (navidromeTrack.duration || 0) * 1000,
-            _original: navidromeTrack // Keep original for reference
+            _original: navidromeTrack
         };
     },
 
@@ -132,12 +133,14 @@ const NavidromeAPI = {
             name: navidromePlaylist.name,
             image: navidromePlaylist.coverArt ? this.getCoverArtUrl(navidromePlaylist.coverArt) : null,
             trackCount: navidromePlaylist.songCount || 0,
+            owner: navidromePlaylist.owner || this.username,
+            isOwner: navidromePlaylist.owner === this.username || !navidromePlaylist.owner,
             tracks: []
         };
     },
 
     /**
-     * API METHODS
+     * API METHODS - Reading
      */
 
     async getPlaylists() {
@@ -207,6 +210,147 @@ const NavidromeAPI = {
         } catch (error) {
             console.error('Error searching songs:', error);
             return [];
+        }
+    },
+
+    /**
+     * PLAYLIST EDITING API METHODS
+     */
+
+    /**
+     * Create a new playlist
+     * @param {string} name - Playlist name
+     * @returns {Promise<Object|null>} Created playlist or null on error
+     */
+    async createPlaylist(name) {
+        try {
+            const url = this.buildUrl('/createPlaylist', { name });
+            const response = await fetch(url);
+            const data = await response.json();
+
+            if (data['subsonic-response'].status === 'ok') {
+                const playlist = data['subsonic-response'].playlist;
+                return this.mapPlaylist(playlist);
+            }
+            return null;
+        } catch (error) {
+            console.error('Error creating playlist:', error);
+            return null;
+        }
+    },
+
+    /**
+     * Update playlist name
+     * @param {string} playlistId - Playlist ID
+     * @param {string} name - New name
+     * @returns {Promise<boolean>} Success status
+     */
+    async updatePlaylistName(playlistId, name) {
+        try {
+            const url = this.buildUrl('/updatePlaylist', { 
+                playlistId, 
+                name 
+            });
+            const response = await fetch(url);
+            const data = await response.json();
+
+            return data['subsonic-response'].status === 'ok';
+        } catch (error) {
+            console.error('Error updating playlist name:', error);
+            return false;
+        }
+    },
+
+    /**
+     * Add tracks to playlist
+     * @param {string} playlistId - Playlist ID
+     * @param {Array<string>} trackIds - Track IDs to add
+     * @returns {Promise<boolean>} Success status
+     */
+    async addTracksToPlaylist(playlistId, trackIds) {
+        try {
+            const params = { playlistId };
+            trackIds.forEach(id => {
+                params.songIdToAdd = id;
+            });
+
+            const url = this.buildUrl('/updatePlaylist', params);
+            const response = await fetch(url);
+            const data = await response.json();
+
+            return data['subsonic-response'].status === 'ok';
+        } catch (error) {
+            console.error('Error adding tracks to playlist:', error);
+            return false;
+        }
+    },
+
+    /**
+     * Remove track from playlist by index
+     * @param {string} playlistId - Playlist ID
+     * @param {number} trackIndex - Index of track to remove (0-based)
+     * @returns {Promise<boolean>} Success status
+     */
+    async removeTrackFromPlaylist(playlistId, trackIndex) {
+        try {
+            const url = this.buildUrl('/updatePlaylist', { 
+                playlistId, 
+                songIndexToRemove: trackIndex 
+            });
+            const response = await fetch(url);
+            const data = await response.json();
+
+            return data['subsonic-response'].status === 'ok';
+        } catch (error) {
+            console.error('Error removing track from playlist:', error);
+            return false;
+        }
+    },
+
+    /**
+     * Reorder tracks in playlist
+     * @param {string} playlistId - Playlist ID
+     * @param {Array<string>} trackIds - Complete ordered list of track IDs
+     * @returns {Promise<boolean>} Success status
+     */
+    async reorderPlaylistTracks(playlistId, trackIds) {
+        try {
+            // First, get current playlist to know all tracks
+            const currentPlaylist = await this.getPlaylist(playlistId);
+            if (!currentPlaylist) return false;
+
+            // Remove all tracks
+            for (let i = currentPlaylist.tracks.length - 1; i >= 0; i--) {
+                await this.removeTrackFromPlaylist(playlistId, i);
+            }
+
+            // Add tracks in new order
+            for (const trackId of trackIds) {
+                await this.addTracksToPlaylist(playlistId, [trackId]);
+            }
+
+            return true;
+        } catch (error) {
+            console.error('Error reordering playlist tracks:', error);
+            return false;
+        }
+    },
+
+    /**
+     * Delete a playlist
+     * @param {string} playlistId - Playlist ID
+     * @returns {Promise<boolean>} Success status
+     */
+    async deletePlaylist(playlistId) {
+        try {
+            const url = this.buildUrl('/deletePlaylist', { id: playlistId });
+            const response = await fetch(url);
+            const data = await response.json();
+
+            return data['subsonic-response'].status === 'ok';
+        } catch (error) {
+            console.error('Error deleting playlist:', error);
+            return false;
         }
     },
 

@@ -1,14 +1,18 @@
 /**
  * UI.JS - Responsive Mobile & Desktop Interface Logic
- * Enhanced with Server URL Persistence
+ * Enhanced with Full Playlist Editing Features
  */
 
 const UI = {
     currentView: 'home',
     currentPlaylist: null,
     allSongs: [],
+    allPlaylists: [],
     contextMenuTrack: null,
+    contextMenuTrackIndex: null,
     viewHistory: [],
+    editingPlaylistId: null,
+    draggedIndex: null,
 
     /**
      * Initialize UI
@@ -18,7 +22,6 @@ const UI = {
         this.detectLayoutMode();
         window.addEventListener('resize', () => this.detectLayoutMode());
         
-        // Check for saved server URL and auto-connect
         await this.autoConnectIfPossible();
     },
 
@@ -31,11 +34,8 @@ const UI = {
         
         if (savedUrl) {
             console.log('Found saved server URL:', savedUrl);
-            
-            // Pre-fill the server URL field
             document.getElementById('serverUrl').value = savedUrl;
             
-            // Auto-connect with saved URL
             const username = 'kush';
             const password = '252349';
             
@@ -44,24 +44,18 @@ const UI = {
             
             if (success) {
                 console.log('Auto-connect successful!');
-                // Hide login modal
                 loginModal.classList.remove('active');
                 await this.loadInitialData();
             } else {
                 console.log('Auto-connect failed, showing login modal');
-                // Connection failed with saved URL - show login modal
                 loginModal.classList.add('active');
             }
         } else {
             console.log('No saved URL found, showing login modal');
-            // No saved URL - show login modal
             loginModal.classList.add('active');
         }
     },
 
-    /**
-     * Detect if we're in mobile or desktop mode
-     */
     detectLayoutMode() {
         const isDesktop = window.innerWidth >= 1024;
         document.body.classList.toggle('desktop-mode', isDesktop);
@@ -78,30 +72,26 @@ const UI = {
             await this.handleLogin();
         });
 
-        // Bottom navigation (mobile)
+        // Navigation
         document.querySelectorAll('.bottom-nav .nav-item').forEach(item => {
             item.addEventListener('click', (e) => {
                 e.preventDefault();
-                const view = item.dataset.view;
-                this.showView(view);
+                this.showView(item.dataset.view);
             });
         });
 
-        // Sidebar navigation (desktop)
         document.querySelectorAll('.sidebar .sidebar-item').forEach(item => {
             item.addEventListener('click', (e) => {
                 e.preventDefault();
-                const view = item.dataset.view;
-                this.showView(view);
+                this.showView(item.dataset.view);
             });
         });
 
-        // Back button (mobile)
         document.getElementById('backBtn').addEventListener('click', () => {
             this.navigateBack();
         });
 
-        // Mobile mini player - tap track area to open full player
+        // Mini player
         const miniPlayerTrack = document.getElementById('miniPlayerTrack');
         if (miniPlayerTrack) {
             miniPlayerTrack.addEventListener('click', () => {
@@ -109,12 +99,11 @@ const UI = {
             });
         }
 
-        // Mobile full player close
         document.getElementById('closePlayerBtn').addEventListener('click', () => {
             this.closeFullPlayer();
         });
 
-        // Mobile mini player controls
+        // Mini player controls
         document.getElementById('miniPlayPauseBtn').addEventListener('click', (e) => {
             e.stopPropagation();
             Player.togglePlayPause();
@@ -190,7 +179,7 @@ const UI = {
             Player.seek(percent);
         });
 
-        // Queue button (desktop)
+        // Queue
         document.getElementById('queueBtn').addEventListener('click', () => {
             this.toggleQueueDrawer();
         });
@@ -199,12 +188,10 @@ const UI = {
             this.closeQueueDrawer();
         });
 
-        // Queue button (mobile full player)
         document.getElementById('playerQueueBtn').addEventListener('click', () => {
             this.openMobileQueue();
         });
 
-        // Mobile queue close
         document.getElementById('closeMobileQueueBtn').addEventListener('click', () => {
             this.closeMobileQueue();
         });
@@ -232,6 +219,34 @@ const UI = {
             }
         });
 
+        document.getElementById('ctxAddToPlaylist').addEventListener('click', () => {
+            if (this.contextMenuTrack) {
+                this.showAddToPlaylistModal(this.contextMenuTrack);
+                this.hideContextMenu();
+            }
+        });
+
+        document.getElementById('ctxRemoveFromPlaylist').addEventListener('click', () => {
+            if (this.contextMenuTrack && this.contextMenuTrackIndex !== null) {
+                this.removeTrackFromCurrentPlaylist(this.contextMenuTrackIndex);
+                this.hideContextMenu();
+            }
+        });
+
+        document.getElementById('ctxMoveUp').addEventListener('click', () => {
+            if (this.contextMenuTrackIndex !== null && this.contextMenuTrackIndex > 0) {
+                this.moveTrackInPlaylist(this.contextMenuTrackIndex, this.contextMenuTrackIndex - 1);
+                this.hideContextMenu();
+            }
+        });
+
+        document.getElementById('ctxMoveDown').addEventListener('click', () => {
+            if (this.contextMenuTrack && this.contextMenuTrackIndex !== null) {
+                this.moveTrackInPlaylist(this.contextMenuTrackIndex, this.contextMenuTrackIndex + 1);
+                this.hideContextMenu();
+            }
+        });
+
         document.getElementById('ctxCancel').addEventListener('click', () => {
             this.hideContextMenu();
         });
@@ -239,6 +254,41 @@ const UI = {
         document.getElementById('overlay').addEventListener('click', () => {
             this.hideContextMenu();
             this.closeQueueDrawer();
+            this.hideAddToPlaylistModal();
+            this.hideNewPlaylistModal();
+            this.hideEditNameModal();
+            this.hideDeleteConfirmModal();
+        });
+
+        // Playlist editing modals
+        document.getElementById('closeAddToPlaylistBtn').addEventListener('click', () => {
+            this.hideAddToPlaylistModal();
+        });
+
+        document.getElementById('closeNewPlaylistBtn').addEventListener('click', () => {
+            this.hideNewPlaylistModal();
+        });
+
+        document.getElementById('newPlaylistForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.handleCreatePlaylist();
+        });
+
+        document.getElementById('closeEditNameBtn').addEventListener('click', () => {
+            this.hideEditNameModal();
+        });
+
+        document.getElementById('editNameForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.handleRenamePlaylist();
+        });
+
+        document.getElementById('confirmDeleteBtn').addEventListener('click', () => {
+            this.handleDeletePlaylist();
+        });
+
+        document.getElementById('cancelDeleteBtn').addEventListener('click', () => {
+            this.hideDeleteConfirmModal();
         });
     },
 
@@ -263,25 +313,22 @@ const UI = {
     },
 
     async loadInitialData() {
-        const playlists = await NavidromeAPI.getPlaylists();
-        this.renderRecentPlaylists(playlists.slice(0, 6));
+        this.allPlaylists = await NavidromeAPI.getPlaylists();
+        this.renderRecentPlaylists(this.allPlaylists.slice(0, 6));
     },
 
     /**
      * VIEW NAVIGATION
      */
     showView(viewName) {
-        // Update both navigation bars
         document.querySelectorAll('.bottom-nav .nav-item, .sidebar .sidebar-item').forEach(item => {
             item.classList.toggle('active', item.dataset.view === viewName);
         });
 
-        // Hide all views
         document.querySelectorAll('.view').forEach(view => {
             view.classList.remove('active');
         });
 
-        // Show selected view
         const viewMap = {
             'home': 'homeView',
             'playlists': 'playlistsView',
@@ -293,11 +340,9 @@ const UI = {
             document.getElementById(viewId).classList.add('active');
             this.currentView = viewName;
             
-            // Hide back button for main views
             document.getElementById('backBtn').style.display = 'none';
             this.viewHistory = [];
 
-            // Update header title
             const titles = {
                 'home': 'Music',
                 'playlists': 'Library',
@@ -305,7 +350,6 @@ const UI = {
             };
             document.getElementById('headerTitle').textContent = titles[viewName];
 
-            // Load data if needed
             if (viewName === 'playlists') {
                 this.loadPlaylistsView();
             } else if (viewName === 'songs') {
@@ -344,9 +388,21 @@ const UI = {
     },
 
     async loadPlaylistsView() {
-        const playlists = await NavidromeAPI.getPlaylists();
+        this.allPlaylists = await NavidromeAPI.getPlaylists();
         const container = document.getElementById('playlistsGrid');
-        container.innerHTML = playlists.map(p => `
+        
+        // Add "Create New Playlist" card
+        let html = `
+            <div class="card card-create-playlist">
+                <div class="card-cover card-cover-create">
+                    <i class="fas fa-plus"></i>
+                </div>
+                <div class="card-title">Create Playlist</div>
+                <div class="card-subtitle">Add new playlist</div>
+            </div>
+        `;
+
+        html += this.allPlaylists.map(p => `
             <div class="card" data-id="${p.id}">
                 <div class="card-cover">
                     ${p.image ? `<img src="${p.image}" alt="${p.name}">` : ''}
@@ -356,7 +412,15 @@ const UI = {
             </div>
         `).join('');
 
-        container.querySelectorAll('.card').forEach(card => {
+        container.innerHTML = html;
+
+        // Create playlist card
+        container.querySelector('.card-create-playlist').addEventListener('click', () => {
+            this.showNewPlaylistModal();
+        });
+
+        // Existing playlists
+        container.querySelectorAll('.card[data-id]').forEach(card => {
             card.addEventListener('click', () => {
                 this.showPlaylistDetail(card.dataset.id);
             });
@@ -371,8 +435,8 @@ const UI = {
         if (!playlist) return;
 
         this.currentPlaylist = playlist;
+        this.editingPlaylistId = playlistId;
 
-        // Save current view to history (mobile only)
         if (window.innerWidth < 1024) {
             if (this.viewHistory.length === 0 || this.viewHistory[this.viewHistory.length - 1] !== this.currentView) {
                 this.viewHistory.push(this.currentView);
@@ -380,11 +444,9 @@ const UI = {
             document.getElementById('backBtn').style.display = 'flex';
         }
 
-        // Show detail view
         document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
         document.getElementById('playlistDetailView').classList.add('active');
 
-        // Render header
         const cover = document.getElementById('playlistCover');
         cover.innerHTML = playlist.image ? `<img src="${playlist.image}">` : '';
 
@@ -392,10 +454,10 @@ const UI = {
         document.getElementById('playlistMeta').textContent = `${playlist.tracks.length} songs`;
         document.getElementById('headerTitle').textContent = playlist.name;
 
-        // Render tracks
+        // Show/hide edit controls based on ownership
+        this.renderPlaylistEditControls(playlist);
         this.renderPlaylistTracks(playlist.tracks);
 
-        // Setup playlist buttons
         document.getElementById('playPlaylistBtn').onclick = () => {
             Player.createQueueFromPlaylist(playlist.tracks);
             Player.playTrackAtIndex(0);
@@ -409,10 +471,35 @@ const UI = {
         };
     },
 
+    renderPlaylistEditControls(playlist) {
+        const actionsContainer = document.querySelector('.playlist-actions');
+        
+        // Remove existing edit buttons if any
+        const existingEditBtns = actionsContainer.querySelectorAll('.btn-edit, .btn-delete');
+        existingEditBtns.forEach(btn => btn.remove());
+
+        if (playlist.isOwner) {
+            const editBtn = document.createElement('button');
+            editBtn.className = 'btn btn-edit';
+            editBtn.innerHTML = '<i class="fas fa-edit"></i> Edit Name';
+            editBtn.onclick = () => this.showEditNameModal(playlist);
+
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'btn btn-delete';
+            deleteBtn.innerHTML = '<i class="fas fa-trash"></i> Delete';
+            deleteBtn.onclick = () => this.showDeleteConfirmModal(playlist);
+
+            actionsContainer.appendChild(editBtn);
+            actionsContainer.appendChild(deleteBtn);
+        }
+    },
+
     renderPlaylistTracks(tracks) {
         const container = document.getElementById('tracksList');
         container.innerHTML = tracks.map((track, index) => `
-            <li class="track-item ${Player.currentTrack && Player.currentTrack.id === track.id ? 'playing' : ''}" data-index="${index}">
+            <li class="track-item ${Player.currentTrack && Player.currentTrack.id === track.id ? 'playing' : ''}" 
+                data-index="${index}"
+                draggable="${this.currentPlaylist?.isOwner ? 'true' : 'false'}">
                 <div class="track-number">${index + 1}</div>
                 ${track.album.image ? `
                     <div class="track-cover">
@@ -434,7 +521,7 @@ const UI = {
             
             item.addEventListener('click', (e) => {
                 if (e.target.closest('.track-menu')) {
-                    this.showContextMenu(e, tracks[index]);
+                    this.showContextMenu(e, tracks[index], index);
                 } else {
                     if (Player.queue.length === 0 || Player.originalPlaylist !== tracks) {
                         Player.createQueueFromPlaylist(tracks);
@@ -443,7 +530,54 @@ const UI = {
                     this.showMiniPlayer();
                 }
             });
+
+            // Drag and drop for reordering (only if owner)
+            if (this.currentPlaylist?.isOwner) {
+                item.addEventListener('dragstart', (e) => {
+                    this.draggedIndex = index;
+                    item.classList.add('dragging');
+                });
+
+                item.addEventListener('dragend', (e) => {
+                    item.classList.remove('dragging');
+                    this.draggedIndex = null;
+                });
+
+                item.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    const afterElement = this.getDragAfterElement(container, e.clientY);
+                    const dragging = container.querySelector('.dragging');
+                    if (afterElement == null) {
+                        container.appendChild(dragging);
+                    } else {
+                        container.insertBefore(dragging, afterElement);
+                    }
+                });
+
+                item.addEventListener('drop', async (e) => {
+                    e.preventDefault();
+                    const dropIndex = parseInt(item.dataset.index);
+                    if (this.draggedIndex !== null && this.draggedIndex !== dropIndex) {
+                        await this.moveTrackInPlaylist(this.draggedIndex, dropIndex);
+                    }
+                });
+            }
         });
+    },
+
+    getDragAfterElement(container, y) {
+        const draggableElements = [...container.querySelectorAll('.track-item:not(.dragging)')];
+
+        return draggableElements.reduce((closest, child) => {
+            const box = child.getBoundingClientRect();
+            const offset = y - box.top - box.height / 2;
+
+            if (offset < 0 && offset > closest.offset) {
+                return { offset: offset, element: child };
+            } else {
+                return closest;
+            }
+        }, { offset: Number.NEGATIVE_INFINITY }).element;
     },
 
     /**
@@ -465,14 +599,24 @@ const UI = {
                 </div>
                 <div class="card-title">${song.name}</div>
                 <div class="card-subtitle">${song.artist.name}</div>
+                <div class="card-menu" data-index="${index}">
+                    <i class="fas fa-plus"></i>
+                </div>
             </div>
         `).join('');
 
         container.querySelectorAll('.card').forEach((card, index) => {
-            card.addEventListener('click', () => {
-                Player.createQueueFromPlaylist(songs);
-                Player.playTrackAtIndex(index);
-                this.showMiniPlayer();
+            const menuBtn = card.querySelector('.card-menu');
+            
+            card.addEventListener('click', (e) => {
+                if (e.target.closest('.card-menu')) {
+                    e.stopPropagation();
+                    this.showAddToPlaylistModal(songs[index]);
+                } else {
+                    Player.createQueueFromPlaylist(songs);
+                    Player.playTrackAtIndex(index);
+                    this.showMiniPlayer();
+                }
             });
         });
     },
@@ -492,7 +636,194 @@ const UI = {
     },
 
     /**
-     * PLAYER UI UPDATES - Unified for mobile and desktop
+     * PLAYLIST EDITING OPERATIONS
+     */
+    async removeTrackFromCurrentPlaylist(trackIndex) {
+        if (!this.currentPlaylist || !this.currentPlaylist.isOwner) return;
+
+        const success = await NavidromeAPI.removeTrackFromPlaylist(
+            this.currentPlaylist.id,
+            trackIndex
+        );
+
+        if (success) {
+            await this.refreshCurrentPlaylist();
+        } else {
+            alert('Failed to remove track from playlist');
+        }
+    },
+
+    async moveTrackInPlaylist(fromIndex, toIndex) {
+        if (!this.currentPlaylist || !this.currentPlaylist.isOwner) return;
+        if (fromIndex === toIndex) return;
+
+        const tracks = [...this.currentPlaylist.tracks];
+        const [movedTrack] = tracks.splice(fromIndex, 1);
+        tracks.splice(toIndex, 0, movedTrack);
+
+        const trackIds = tracks.map(t => t.id);
+        const success = await NavidromeAPI.reorderPlaylistTracks(
+            this.currentPlaylist.id,
+            trackIds
+        );
+
+        if (success) {
+            await this.refreshCurrentPlaylist();
+        } else {
+            alert('Failed to reorder tracks');
+        }
+    },
+
+    async refreshCurrentPlaylist() {
+        if (!this.editingPlaylistId) return;
+
+        const playlist = await NavidromeAPI.getPlaylist(this.editingPlaylistId);
+        if (playlist) {
+            this.currentPlaylist = playlist;
+            document.getElementById('playlistMeta').textContent = `${playlist.tracks.length} songs`;
+            this.renderPlaylistTracks(playlist.tracks);
+        }
+    },
+
+    /**
+     * MODALS
+     */
+    showNewPlaylistModal() {
+        document.getElementById('newPlaylistName').value = '';
+        document.getElementById('overlay').classList.add('active');
+        document.getElementById('newPlaylistModal').classList.add('active');
+        document.getElementById('newPlaylistName').focus();
+    },
+
+    hideNewPlaylistModal() {
+        document.getElementById('overlay').classList.remove('active');
+        document.getElementById('newPlaylistModal').classList.remove('active');
+    },
+
+    async handleCreatePlaylist() {
+        const name = document.getElementById('newPlaylistName').value.trim();
+        if (!name) return;
+
+        const playlist = await NavidromeAPI.createPlaylist(name);
+        if (playlist) {
+            this.hideNewPlaylistModal();
+            this.allPlaylists = await NavidromeAPI.getPlaylists();
+            await this.showPlaylistDetail(playlist.id);
+        } else {
+            alert('Failed to create playlist');
+        }
+    },
+
+    showEditNameModal(playlist) {
+        document.getElementById('editPlaylistName').value = playlist.name;
+        document.getElementById('overlay').classList.add('active');
+        document.getElementById('editNameModal').classList.add('active');
+        document.getElementById('editPlaylistName').focus();
+    },
+
+    hideEditNameModal() {
+        document.getElementById('overlay').classList.remove('active');
+        document.getElementById('editNameModal').classList.remove('active');
+    },
+
+    async handleRenamePlaylist() {
+        const name = document.getElementById('editPlaylistName').value.trim();
+        if (!name || !this.currentPlaylist) return;
+
+        const success = await NavidromeAPI.updatePlaylistName(
+            this.currentPlaylist.id,
+            name
+        );
+
+        if (success) {
+            this.hideEditNameModal();
+            document.getElementById('playlistName').textContent = name;
+            document.getElementById('headerTitle').textContent = name;
+            this.currentPlaylist.name = name;
+            this.allPlaylists = await NavidromeAPI.getPlaylists();
+        } else {
+            alert('Failed to rename playlist');
+        }
+    },
+
+    showDeleteConfirmModal(playlist) {
+        document.getElementById('deletePlaylistName').textContent = playlist.name;
+        document.getElementById('overlay').classList.add('active');
+        document.getElementById('deleteConfirmModal').classList.add('active');
+    },
+
+    hideDeleteConfirmModal() {
+        document.getElementById('overlay').classList.remove('active');
+        document.getElementById('deleteConfirmModal').classList.remove('active');
+    },
+
+    async handleDeletePlaylist() {
+        if (!this.currentPlaylist) return;
+
+        const success = await NavidromeAPI.deletePlaylist(this.currentPlaylist.id);
+        
+        if (success) {
+            this.hideDeleteConfirmModal();
+            this.editingPlaylistId = null;
+            this.currentPlaylist = null;
+            this.allPlaylists = await NavidromeAPI.getPlaylists();
+            this.showView('playlists');
+        } else {
+            alert('Failed to delete playlist');
+        }
+    },
+
+    showAddToPlaylistModal(track) {
+        this.contextMenuTrack = track;
+        
+        const container = document.getElementById('addToPlaylistList');
+        container.innerHTML = this.allPlaylists.filter(p => p.isOwner).map(p => `
+            <div class="playlist-select-item" data-id="${p.id}">
+                <div class="playlist-select-icon">
+                    ${p.image ? `<img src="${p.image}">` : '<i class="fas fa-music"></i>'}
+                </div>
+                <div class="playlist-select-info">
+                    <div class="playlist-select-name">${p.name}</div>
+                    <div class="playlist-select-count">${p.trackCount} songs</div>
+                </div>
+            </div>
+        `).join('');
+
+        container.querySelectorAll('.playlist-select-item').forEach(item => {
+            item.addEventListener('click', async () => {
+                const playlistId = item.dataset.id;
+                await this.addTrackToPlaylist(track, playlistId);
+            });
+        });
+
+        document.getElementById('overlay').classList.add('active');
+        document.getElementById('addToPlaylistModal').classList.add('active');
+    },
+
+    hideAddToPlaylistModal() {
+        document.getElementById('overlay').classList.remove('active');
+        document.getElementById('addToPlaylistModal').classList.remove('active');
+        this.contextMenuTrack = null;
+    },
+
+    async addTrackToPlaylist(track, playlistId) {
+        const success = await NavidromeAPI.addTracksToPlaylist(playlistId, [track.id]);
+        
+        if (success) {
+            this.hideAddToPlaylistModal();
+            
+            if (this.editingPlaylistId === playlistId) {
+                await this.refreshCurrentPlaylist();
+            }
+            
+            this.allPlaylists = await NavidromeAPI.getPlaylists();
+        } else {
+            alert('Failed to add track to playlist');
+        }
+    },
+
+    /**
+     * PLAYER UI UPDATES
      */
     showMiniPlayer() {
         document.getElementById('miniPlayer').style.display = 'flex';
@@ -508,69 +839,57 @@ const UI = {
 
     updateAllPlayerInfo(track) {
         if (!track) {
-            // Mobile mini player
             document.getElementById('miniPlayerTitle').textContent = 'No track';
             document.getElementById('miniPlayerArtist').textContent = 'Select a song';
             document.getElementById('miniPlayerCover').innerHTML = '';
             
-            // Mobile full player
             document.getElementById('playerTitle').textContent = 'No track playing';
             document.getElementById('playerArtist').textContent = 'Select a song';
             document.getElementById('playerArtwork').innerHTML = '';
             
-            // Desktop player bar
             document.getElementById('desktopPlayerTitle').textContent = 'No track';
             document.getElementById('desktopPlayerArtist').textContent = 'Select a song';
             document.getElementById('desktopPlayerCover').innerHTML = '';
             return;
         }
 
-        // Mobile mini player
         document.getElementById('miniPlayerTitle').textContent = track.name;
         document.getElementById('miniPlayerArtist').textContent = track.artist.name;
         document.getElementById('miniPlayerCover').innerHTML = track.album.image ? `<img src="${track.album.image}">` : '';
 
-        // Mobile full player
         document.getElementById('playerTitle').textContent = track.name;
         document.getElementById('playerArtist').textContent = track.artist.name;
         document.getElementById('playerArtwork').innerHTML = track.album.image ? `<img src="${track.album.image}">` : '';
 
-        // Desktop player bar
         document.getElementById('desktopPlayerTitle').textContent = track.name;
         document.getElementById('desktopPlayerArtist').textContent = track.artist.name;
         document.getElementById('desktopPlayerCover').innerHTML = track.album.image ? `<img src="${track.album.image}">` : '';
     },
 
     updateAllProgress(percent, current, total) {
-        // Mobile full player
         document.getElementById('progressFill').style.width = `${percent}%`;
         document.getElementById('timeCurrent').textContent = Player.formatTime(current);
         document.getElementById('timeTotal').textContent = Player.formatTime(total);
 
-        // Desktop player bar
         document.getElementById('desktopProgressFill').style.width = `${percent}%`;
         document.getElementById('desktopTimeCurrent').textContent = Player.formatTime(current);
         document.getElementById('desktopTimeTotal').textContent = Player.formatTime(total);
     },
 
     updateShuffleButtons() {
-        // Mobile
         const mobileBtn = document.getElementById('shuffleBtn');
         mobileBtn.classList.toggle('active', Player.isShuffled);
 
-        // Desktop
         const desktopBtn = document.getElementById('desktopShuffleBtn');
         desktopBtn.classList.toggle('active', Player.isShuffled);
     },
 
     updateLoopButtons() {
-        // Mobile
         const mobileBtn = document.getElementById('loopBtn');
         const mobileIcon = mobileBtn.querySelector('i');
         mobileBtn.classList.toggle('active', Player.loopMode !== 'off');
         mobileIcon.className = Player.loopMode === 'one' ? 'fas fa-redo-alt' : 'fas fa-redo';
 
-        // Desktop
         const desktopBtn = document.getElementById('desktopLoopBtn');
         const desktopIcon = desktopBtn.querySelector('i');
         desktopBtn.classList.toggle('active', Player.loopMode !== 'off');
@@ -616,14 +935,12 @@ const UI = {
 
         let html = '';
         
-        // Now Playing section
         if (Player.currentIndex >= 0 && Player.currentIndex < Player.queue.length) {
             html += '<div class="queue-section-title">Now Playing</div>';
             const track = Player.queue[Player.currentIndex];
             html += this.renderQueueItem(track, Player.currentIndex, true);
         }
         
-        // Next from Queue section
         const upcomingTracks = Player.queue.slice(Player.currentIndex + 1);
         if (upcomingTracks.length > 0) {
             html += '<div class="queue-section-title">Next From Queue</div>';
@@ -647,14 +964,12 @@ const UI = {
 
         let html = '';
         
-        // Now Playing section
         if (Player.currentIndex >= 0 && Player.currentIndex < Player.queue.length) {
             html += '<div class="queue-section-title">Now Playing</div>';
             const track = Player.queue[Player.currentIndex];
             html += this.renderQueueItem(track, Player.currentIndex, true);
         }
         
-        // Next from Queue section
         const upcomingTracks = Player.queue.slice(Player.currentIndex + 1);
         if (upcomingTracks.length > 0) {
             html += '<div class="queue-section-title">Next From Queue</div>';
@@ -688,7 +1003,6 @@ const UI = {
     },
 
     attachQueueItemListeners(container) {
-        // Click to play
         container.querySelectorAll('.queue-item').forEach(item => {
             const index = parseInt(item.dataset.index);
             item.addEventListener('click', (e) => {
@@ -698,14 +1012,12 @@ const UI = {
             });
         });
 
-        // Remove buttons
         container.querySelectorAll('.queue-item-remove').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 const index = parseInt(btn.dataset.remove);
                 Player.removeFromQueue(index);
                 
-                // Re-render both queues to stay in sync
                 if (window.innerWidth >= 1024) {
                     this.renderQueue();
                 } else {
@@ -718,9 +1030,20 @@ const UI = {
     /**
      * CONTEXT MENU
      */
-    showContextMenu(event, track) {
+    showContextMenu(event, track, trackIndex = null) {
         event.stopPropagation();
         this.contextMenuTrack = track;
+        this.contextMenuTrackIndex = trackIndex;
+
+        // Show/hide playlist-specific options
+        const isInPlaylist = this.currentPlaylist && trackIndex !== null;
+        document.getElementById('ctxRemoveFromPlaylist').style.display = 
+            isInPlaylist && this.currentPlaylist.isOwner ? 'flex' : 'none';
+        document.getElementById('ctxMoveUp').style.display = 
+            isInPlaylist && this.currentPlaylist.isOwner && trackIndex > 0 ? 'flex' : 'none';
+        document.getElementById('ctxMoveDown').style.display = 
+            isInPlaylist && this.currentPlaylist.isOwner && trackIndex < this.currentPlaylist.tracks.length - 1 ? 'flex' : 'none';
+
         document.getElementById('overlay').classList.add('active');
         document.getElementById('contextMenu').classList.add('active');
     },
@@ -729,10 +1052,10 @@ const UI = {
         document.getElementById('overlay').classList.remove('active');
         document.getElementById('contextMenu').classList.remove('active');
         this.contextMenuTrack = null;
+        this.contextMenuTrackIndex = null;
     }
 };
 
-// Initialize UI when DOM is ready
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => UI.init());
 } else {

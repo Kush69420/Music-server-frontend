@@ -464,6 +464,7 @@ body {
     border-radius: 8px;
     cursor: pointer;
     transition: background 0.2s;
+    position: relative;
 }
 
 .card:hover {
@@ -764,6 +765,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
+    cursor: pointer;
 }
 
 .control-btn:active {
@@ -1218,6 +1220,7 @@ body {
     font-size: 1rem;
     margin-bottom: 0.5rem;
     cursor: pointer;
+    user-select: none;
 }
 
 .context-item:active {
@@ -1245,6 +1248,259 @@ body {
     display: block;
 }
 
+/* ===== PLAYLIST EDITING FEATURES ===== */
+
+/* Edit/Delete Buttons */
+.btn-edit {
+    background: transparent;
+    border: 2px solid var(--border-subtle);
+    color: var(--text-base);
+    padding: 0.875rem 2rem;
+    min-width: 120px;
+}
+
+.btn-edit:hover {
+    border-color: var(--essential-base);
+    color: var(--essential-base);
+}
+
+.btn-delete {
+    background: transparent;
+    border: 2px solid #f15e6c;
+    color: #f15e6c;
+    padding: 0.875rem 2rem;
+    min-width: 120px;
+}
+
+.btn-delete:hover {
+    background: #f15e6c;
+    color: var(--bg-base);
+}
+
+.btn-secondary {
+    background: transparent;
+    border: 2px solid var(--border-subtle);
+    color: var(--text-base);
+}
+
+.btn-secondary:hover {
+    border-color: var(--text-base);
+}
+
+.btn-danger {
+    background: #f15e6c;
+    color: var(--text-base);
+}
+
+.btn-danger:hover {
+    background: #d14954;
+}
+
+/* Create Playlist Card */
+.card-create-playlist {
+    border: 2px dashed var(--border-subtle);
+    transition: border-color 0.2s;
+}
+
+.card-create-playlist:hover {
+    border-color: var(--essential-base);
+}
+
+.card-cover-create {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3rem;
+    color: var(--text-subdued);
+}
+
+.card-create-playlist:hover .card-cover-create {
+    color: var(--essential-base);
+}
+
+/* Song Card Menu Button */
+.card-menu {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-base);
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.2s;
+    z-index: 2;
+}
+
+.card:hover .card-menu {
+    opacity: 1;
+}
+
+.card-menu:hover {
+    background: rgba(0, 0, 0, 0.9);
+    transform: scale(1.1);
+}
+
+/* Bottom Sheet Modals */
+.bottom-sheet-modal {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--bg-elevated);
+    border-top-left-radius: 16px;
+    border-top-right-radius: 16px;
+    transform: translateY(100%);
+    transition: transform 0.3s ease;
+    z-index: 200;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.bottom-sheet-modal.active {
+    transform: translateY(0);
+}
+
+.modal-sheet-content {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding-bottom: calc(var(--safe-area-bottom) + 1rem);
+}
+
+.modal-sheet-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--border-subtle);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.modal-sheet-header h3 {
+    font-size: 1.25rem;
+    font-weight: 700;
+}
+
+.modal-sheet-body {
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 1rem;
+}
+
+/* Playlist Selection List */
+.playlist-select-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.2s;
+    margin-bottom: 0.5rem;
+    animation: fadeIn 0.2s ease;
+}
+
+.playlist-select-item:hover {
+    background: var(--bg-highlight);
+}
+
+.playlist-select-item:active {
+    background: var(--bg-press);
+}
+
+.playlist-select-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 4px;
+    background: var(--bg-highlight);
+    overflow: hidden;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    color: var(--text-subdued);
+}
+
+.playlist-select-icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.playlist-select-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.playlist-select-name {
+    font-weight: 600;
+    font-size: 1rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 0.25rem;
+}
+
+.playlist-select-count {
+    font-size: 0.875rem;
+    color: var(--text-subdued);
+}
+
+/* Delete Confirmation */
+.delete-warning {
+    color: var(--text-base);
+    line-height: 1.5;
+    margin-bottom: 1.5rem;
+    font-size: 0.9375rem;
+}
+
+.delete-warning #deletePlaylistName {
+    font-weight: 700;
+    color: var(--essential-base);
+}
+
+.modal-actions {
+    display: flex;
+    gap: 1rem;
+}
+
+.modal-actions .btn {
+    flex: 1;
+}
+
+/* Track Item Dragging */
+.track-item[draggable="true"] {
+    cursor: grab;
+}
+
+.track-item[draggable="true"]:active {
+    cursor: grabbing;
+}
+
+.track-item.dragging {
+    opacity: 0.5;
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 /* ===== SCROLLBAR HIDING ===== */
 ::-webkit-scrollbar {
     width: 0;
@@ -1265,21 +1521,28 @@ body {
     .main-content {
         padding-bottom: calc(180px + var(--safe-area-bottom));
     }
+
+    .bottom-sheet-modal {
+        max-width: 600px;
+        left: 50%;
+        transform: translate(-50%, 100%);
+    }
+
+    .bottom-sheet-modal.active {
+        transform: translate(-50%, 0);
+    }
 }
 
 /* ===== MOBILE QUEUE SPECIFIC (< 1024px) ===== */
 @media (max-width: 1023px) {
-    /* Hide desktop queue drawer on mobile */
     .queue-drawer {
         display: none;
     }
     
-    /* Show mobile queue overlay */
     .mobile-queue-overlay {
         display: flex;
     }
     
-    /* Make queue items more touch-friendly on mobile */
     .queue-item {
         padding: 1rem 0.75rem;
         min-height: 72px;
@@ -1298,9 +1561,34 @@ body {
         font-size: 0.875rem;
     }
     
-    /* Always show remove button on mobile */
     .queue-item-remove {
         opacity: 1;
+    }
+
+    .playlist-actions {
+        flex-wrap: wrap;
+    }
+
+    .btn-edit,
+    .btn-delete,
+    .btn-play,
+    .btn-shuffle {
+        min-width: 100px;
+        padding: 0.75rem 1.5rem;
+        font-size: 0.875rem;
+    }
+
+    .modal-sheet-header h3 {
+        font-size: 1.125rem;
+    }
+
+    .playlist-select-item {
+        padding: 0.875rem;
+    }
+
+    .playlist-select-icon {
+        width: 48px;
+        height: 48px;
     }
 }
 
@@ -1323,7 +1611,6 @@ body {
 
 /* ===== DESKTOP BREAKPOINT (≥ 1024px) ===== */
 @media (min-width: 1024px) {
-    /* Show sidebar, hide mobile nav */
     .sidebar {
         display: block;
     }
@@ -1332,12 +1619,10 @@ body {
         display: none;
     }
     
-    /* Adjust main wrapper for sidebar */
     .main-wrapper {
         margin-left: var(--sidebar-width);
     }
     
-    /* Hide mobile mini player, show desktop player bar */
     .mini-player {
         display: none !important;
     }
@@ -1347,29 +1632,24 @@ body {
         left: var(--sidebar-width);
     }
     
-    /* Adjust main content padding for desktop player bar */
     .main-content {
         padding-bottom: calc(var(--player-bar-height) + 1rem);
     }
     
-    /* Hide mobile full player and mobile queue on desktop */
     .full-player,
     .mobile-queue-overlay {
         display: none;
     }
     
-    /* Show desktop queue drawer */
     .queue-drawer {
         display: flex;
     }
     
-    /* Better card grid on desktop */
     .cards-grid {
         grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
         gap: 1.5rem;
     }
     
-    /* Horizontal playlist header on desktop */
     .playlist-header {
         flex-direction: row;
         align-items: flex-end;
@@ -1397,7 +1677,6 @@ body {
         margin-top: 1.5rem;
     }
     
-    /* Track list as table on desktop */
     .track-list {
         padding: 0 1rem;
     }
@@ -1418,7 +1697,6 @@ body {
         opacity: 1;
     }
     
-    /* Better spacing for desktop */
     .view {
         padding: 1.5rem 2rem;
     }
@@ -1428,9 +1706,38 @@ body {
         margin-bottom: 1.5rem;
     }
     
-    /* Hide back button on desktop */
     .back-btn {
         display: none !important;
+    }
+
+    /* Desktop Modal Styles */
+    .bottom-sheet-modal {
+        left: 50%;
+        right: auto;
+        bottom: 50%;
+        transform: translate(-50%, 50%) scale(0.9);
+        opacity: 0;
+        border-radius: 12px;
+        max-width: 500px;
+        width: 90%;
+        max-height: 600px;
+    }
+
+    .bottom-sheet-modal.active {
+        transform: translate(-50%, 50%) scale(1);
+        opacity: 1;
+    }
+
+    .modal-sheet-content {
+        padding-bottom: 0;
+    }
+
+    .modal-sheet-body {
+        max-height: 400px;
+    }
+
+    .delete-warning {
+        font-size: 1rem;
     }
 }
 
